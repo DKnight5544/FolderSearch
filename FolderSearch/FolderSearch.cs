@@ -27,25 +27,44 @@ namespace FolderSearch
 
         private void LoadData()
         {
-            string dataPath = ConfigurationManager.AppSettings["CusDir32"];
             string indexRoot = ConfigurationManager.AppSettings["IndexRoot"];
+            List<string> files = new List<string>();
+            DirectoryInfo directory = new DirectoryInfo(indexRoot);
+            var dirs = directory.GetDirectories();
 
-            var cusdir32 = File.ReadAllLines(dataPath);
+            var filteredDirectories = dirs.Where(
+                f => !f.Name.StartsWith("$") 
+                && !f.Name.StartsWith("_")
+                && !(f.Extension == ".000")
+                && !(f.Extension == ".001")
+                && ! (f.Name == "System Volume Information")
+                );
 
-            foreach (string row in cusdir32)
+            foreach (var dir in filteredDirectories)
             {
-                var r = row.Split(';');
-                var dirName = r[0];
-                var dirPath = r[1].Replace("M:", indexRoot).Replace("m:", indexRoot) + @"\$Wavelog12.idx";
-
-                var wavelog = File.ReadAllLines(dirPath);
-
-                foreach (string wavelogrow in wavelog)
+                var idxFiles = dir.GetFiles("$Wavelog12.idx", SearchOption.AllDirectories);
+                foreach (var f in idxFiles)
                 {
-                    MusicDB.Add(wavelogrow.ToLower(), dirName);
+                    files.Add(f.FullName);
                 }
 
             }
+
+            foreach (string file in files)
+            {
+
+                var folder = file.Replace(indexRoot + @"\", "").Replace(@"\$Wavelog12.idx", "");
+
+                var wavelog = File.ReadAllLines(file);
+
+                foreach (string wavelogrow in wavelog)
+                {
+                    string guid = Guid.NewGuid().ToString();
+                    MusicDB.Add(guid + wavelogrow.ToLower(), folder.Replace(@"\", @" \ "));
+                }
+
+            }
+
         }
 
         private void SearchCriteria_KeyDown(object sender, KeyEventArgs e)
